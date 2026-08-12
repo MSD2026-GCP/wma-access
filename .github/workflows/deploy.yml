@@ -87,6 +87,7 @@ jobs:
 
           echo "image_uri=$IMAGE_URI" >> $GITHUB_OUTPUT
           echo "✅ Image pushed: $IMAGE_URI"
+          
 
   # ──────────────────────────────────────────────────────────────
   # JOB 3: Deploy to Cloud Run (Staging — branch: development)
@@ -116,7 +117,7 @@ jobs:
         uses: google-github-actions/deploy-cloudrun@v2
         with:
           service: ${{ needs.setup-env.outputs.service_name }}
-          image: ${{ needs.build.outputs.image_uri }}
+          image: "${{ env.ARTIFACT_REGISTRY }}/${{ env.PROJECT_ID }}/cdaras/${{ env.IMAGE_NAME }}:${{ needs.setup-env.outputs.image_tag }}"
           region: ${{ env.REGION }}
           flags: >-
             --allow-unauthenticated
@@ -162,7 +163,7 @@ jobs:
         uses: google-github-actions/deploy-cloudrun@v2
         with:
           service: ${{ needs.setup-env.outputs.service_name }}
-          image: ${{ needs.build.outputs.image_uri }}
+          image: "${{ env.ARTIFACT_REGISTRY }}/${{ env.PROJECT_ID }}/cdaras/${{ env.IMAGE_NAME }}:${{ needs.setup-env.outputs.image_tag }}"
           region: ${{ env.REGION }}
           flags: >-
             --allow-unauthenticated
