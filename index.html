@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CDARAS | Approver Dashboard</title>
+  <link rel="stylesheet" href="index.css">
+  <!-- SEO Meta Tags -->
+  <meta name="description" content="Dashboard Persetujuan Akses Data Pelanggan - Customer Data Access Request & Approval System (CDARAS)">
+  <meta name="author" content="Faisal Akbar">
+</head>
+<body>
+
+  <div class="app-container">
+    <!-- Header Section -->
+    <header>
+      <div class="logo-container">
+        <div class="logo-icon">C</div>
+        <div class="logo-text">
+          <h1>CDARAS</h1>
+          <p>Workshop MSD - Access</p>
+        </div>
+      </div>
+      
+      <!-- User Profile (Approver Faisal Akbar) -->
+      <div class="user-profile">
+        <div class="avatar">FA</div>
+        <div class="user-info">
+          <div class="name">Faisal Akbar</div>
+          <div class="role">Approver (Security PO)</div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Metrics Dashboard Counters -->
+    <section class="metrics-grid" aria-label="Dashboard Ringkasan">
+      <div class="metric-card pending">
+        <div class="metric-data">
+          <h3>Pending Approval</h3>
+          <div class="value" id="countPending">0</div>
+        </div>
+        <div class="metric-icon">⏳</div>
+      </div>
+      
+      <div class="metric-card approved">
+        <div class="metric-data">
+          <h3>Approved Requests</h3>
+          <div class="value" id="countApproved">0</div>
+        </div>
+        <div class="metric-icon">✅</div>
+      </div>
+      
+      <div class="metric-card rejected">
+        <div class="metric-data">
+          <h3>Rejected Requests</h3>
+          <div class="value" id="countRejected">0</div>
+        </div>
+        <div class="metric-icon">❌</div>
+      </div>
+      
+      <div class="metric-card total">
+        <div class="metric-data">
+          <h3>Total Requests</h3>
+          <div class="value" id="countTotal">0</div>
+        </div>
+        <div class="metric-icon">📋</div>
+      </div>
+    </section>
+
+    <!-- Main Active Requests Dashboard -->
+    <main class="main-section" aria-label="Manajemen Pengajuan Akses">
+      <div class="section-header">
+        <h2>Daftar Pengajuan Akses Data</h2>
+        
+        <!-- Tab Switcher -->
+        <div class="tab-switcher" role="tablist">
+          <button class="tab-btn active" id="tabPending" role="tab" aria-selected="true">Pending Approval</button>
+          <button class="tab-btn" id="tabAll" role="tab" aria-selected="false">Semua Pengajuan</button>
+        </div>
+      </div>
+
+      <!-- Requests Dynamic Card List -->
+      <div class="requests-list" id="requestsList">
+        <!-- Rendered by app.js -->
+      </div>
+    </main>
+
+    <!-- Collapsible Immutable Audit Trail Panel -->
+    <footer class="audit-section" id="auditSection" aria-label="Log Kepatuhan Audit">
+      <div class="audit-header" id="auditToggle">
+        <h2>Console Audit Trail (Append-Only)</h2>
+        <span class="audit-toggle-icon">▼</span>
+      </div>
+      <div class="audit-content" id="auditList">
+        <!-- Rendered by app.js -->
+      </div>
+    </footer>
+  </div>
+
+  <!-- Dialog 1: Request Details Dialog Modal -->
+  <dialog id="detailsModal" closedby="any" aria-labelledby="detailsTitle">
+    <div class="dialog-header">
+      <h3 id="detailsTitle">Detail Pengajuan Akses</h3>
+      <button class="close-btn" onclick="closeDetailsModal()">&times;</button>
+    </div>
+    <div class="dialog-body">
+      <div class="detail-row">
+        <label>ID Pengajuan / Judul</label>
+        <p><strong id="detailId">WMA-X</strong> - <span id="detailSummary">Story Summary</span></p>
+      </div>
+      <div class="detail-row">
+        <label>Nama Pemohon (Requester)</label>
+        <p id="detailRequester">Nama Pemohon (email)</p>
+      </div>
+      <div class="detail-row">
+        <label>Kategori Sensitivitas Data</label>
+        <div>
+          <span class="badge-category" id="detailCategory">Kategori</span>
+        </div>
+      </div>
+      <div class="detail-row">
+        <label>Masa Berlaku Sewa Akses</label>
+        <p id="detailDuration">0 Jam</p>
+      </div>
+      <div class="detail-row">
+        <label>Justifikasi Bisnis (Alasan)</label>
+        <div class="justification-text" id="detailJustification">Justifikasi detail di sini...</div>
+      </div>
+      <div class="detail-row">
+        <label>Status Saat Ini</label>
+        <div>
+          <span class="badge-status" id="detailStatus">Status</span>
+        </div>
+      </div>
+      <div class="detail-row" id="detailReasonRow" style="display:none;">
+        <label>Alasan Penolakan</label>
+        <div class="justification-text" id="detailReasonText" style="border-color:var(--danger); color:var(--danger);">Alasan penolakan...</div>
+      </div>
+    </div>
+    <div class="dialog-footer" id="detailActionButtons">
+      <!-- Buttons rendered dynamically -->
+    </div>
+  </dialog>
+
+  <!-- Dialog 2: Rejection Input Dialog Modal -->
+  <dialog id="rejectModal" closedby="any" aria-labelledby="rejectTitle">
+    <div class="dialog-header">
+      <h3 id="rejectTitle">Tolak Pengajuan Akses</h3>
+      <button class="close-btn" onclick="closeRejectModal()">&times;</button>
+    </div>
+    <form id="rejectForm">
+      <div class="dialog-body">
+        <div class="form-group">
+          <label for="rejectReasonInput">Alasan Penolakan <span style="color:var(--danger);">*</span></label>
+          <textarea id="rejectReasonInput" placeholder="Tuliskan justifikasi detail alasan menolak permohonan akses ini..." autocomplete="off"></textarea>
+          <!-- Validation error message -->
+          <div class="error-message" id="rejectErrorMsg">
+            ⚠️ Alasan penolakan wajib diisi
+          </div>
+        </div>
+      </div>
+      <div class="dialog-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeRejectModal()">Batal</button>
+        <button type="submit" class="btn btn-primary" style="background:var(--danger-gradient);">Tolak Pengajuan</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="app.js"></script>
+</body>
+</html>
