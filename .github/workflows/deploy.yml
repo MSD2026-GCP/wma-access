@@ -52,7 +52,6 @@ jobs:
 
     outputs:
       image_uri: ${{ steps.build-push.outputs.image_uri }}
-      image_uri_b64: ${{ steps.build-push.outputs.image_uri_b64 }}
 
     steps:
       - name: Checkout source code
@@ -86,12 +85,8 @@ jobs:
 
           docker push "$IMAGE_URI"
 
-          #echo "image_uri=$IMAGE_URI" >> $GITHUB_OUTPUT
-          #echo "✅ Image pushed: $IMAGE_URI"
-
-          # Encode ke Base64 agar tidak terdeteksi sebagai string Secret oleh GitHub Runner
-          B64_URI=$(echo -n "$IMAGE_URI" | base64 -w 0)
-          echo "image_uri_b64=$B64_URI" >> $GITHUB_OUTPUT
+          echo "image_uri=$IMAGE_URI" >> $GITHUB_OUTPUT
+          echo "✅ Image pushed: $IMAGE_URI"
           
 
   # ──────────────────────────────────────────────────────────────
@@ -117,18 +112,12 @@ jobs:
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
 
-      - name: Decode Image URI
-        id: get_image
-        run: |
-          IMAGE_URI=$(echo "${{ needs.build.outputs.image_uri_b64 }}" | base64 -d)
-          echo "image_uri=$IMAGE_URI" >> $GITHUB_OUTPUT
-
       - name: Deploy to Cloud Run (Staging)
         id: deploy
         uses: google-github-actions/deploy-cloudrun@v2
         with:
           service: ${{ needs.setup-env.outputs.service_name }}
-          image: ${{ needs.build.outputs.image_uri }}
+          image: "${{ env.ARTIFACT_REGISTRY }}/${{ env.PROJECT_ID }}/cdaras/${{ env.IMAGE_NAME }}:${{ needs.setup-env.outputs.image_tag }}"
           region: ${{ env.REGION }}
           flags: >-
             --allow-unauthenticated
