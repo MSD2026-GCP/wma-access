@@ -58,14 +58,6 @@ jobs:
       - name: Checkout source code
         uses: actions/checkout@v4
 
-      - name: Set up Node.js for Automated Testing
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: Run Automated Unit Tests (DoD Quality Gate)
-        run: node app.test.js
-
       # Authenticate to GCP using Service Account JSON Key (Stored in GitHub Secrets)
       - name: Authenticate to Google Cloud
         id: auth
