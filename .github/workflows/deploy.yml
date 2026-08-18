@@ -10,7 +10,8 @@ env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   REGION: asia-southeast2
   ARTIFACT_REGISTRY: asia-southeast2-docker.pkg.dev
-  IMAGE_NAME: cdaras-dashboard
+  PROJECT_KEY: wma
+  IMAGE_NAME: wma-dashboard
 
 jobs:
   # ──────────────────────────────────────────────────────────────
@@ -29,11 +30,11 @@ jobs:
         id: set-env
         run: |
           if [[ "${{ github.ref_name }}" == "main" ]]; then
-            echo "service_name=cdaras-dashboard-prod" >> $GITHUB_OUTPUT
+            echo "service_name=${{ env.PROJECT_KEY }}-dashboard-prod" >> $GITHUB_OUTPUT
             echo "environment=production"             >> $GITHUB_OUTPUT
             echo "image_tag=prod-${{ github.sha }}"  >> $GITHUB_OUTPUT
           else
-            echo "service_name=cdaras-dashboard-dev" >> $GITHUB_OUTPUT
+            echo "service_name=${{ env.PROJECT_KEY }}-dashboard-dev" >> $GITHUB_OUTPUT
             echo "environment=staging"               >> $GITHUB_OUTPUT
             echo "image_tag=dev-${{ github.sha }}"   >> $GITHUB_OUTPUT
           fi
@@ -48,7 +49,7 @@ jobs:
 
     permissions:
       contents: read
-      id-token: write   # Required for Workload Identity Federation
+      id-token: write
 
     outputs:
       image_uri: ${{ steps.build-push.outputs.image_uri }}
@@ -57,13 +58,20 @@ jobs:
       - name: Checkout source code
         uses: actions/checkout@v4
 
-      # Authenticate to GCP via Workload Identity Federation (keyless, recommended)
+      - name: Set up Node.js for Automated Testing
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Run Automated Unit Tests (DoD Quality Gate)
+        run: node app.test.js
+
+      # Authenticate to GCP using Service Account JSON Key (Stored in GitHub Secrets)
       - name: Authenticate to Google Cloud
         id: auth
         uses: google-github-actions/auth@v2
         with:
-          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
@@ -74,7 +82,7 @@ jobs:
       - name: Build and push Docker image
         id: build-push
         run: |
-          IMAGE_URI="${{ env.ARTIFACT_REGISTRY }}/${{ env.PROJECT_ID }}/cdaras/${{ env.IMAGE_NAME }}:${{ needs.setup-env.outputs.image_tag }}"
+          IMAGE_URI="${{ env.ARTIFACT_REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.PROJECT_KEY }}/${{ env.IMAGE_NAME }}:${{ needs.setup-env.outputs.image_tag }}"
 
           docker build \
             --tag "$IMAGE_URI" \
@@ -87,7 +95,6 @@ jobs:
 
           echo "image_uri=$IMAGE_URI" >> $GITHUB_OUTPUT
           echo "✅ Image pushed: $IMAGE_URI"
-          
 
   # ──────────────────────────────────────────────────────────────
   # JOB 3: Deploy to Cloud Run (Staging — branch: development)
@@ -106,18 +113,18 @@ jobs:
       id-token: write
 
     steps:
+      # Authenticate to GCP using Service Account JSON Key (Stored in GitHub Secrets)
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
-          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
 
       - name: Deploy to Cloud Run (Staging)
         id: deploy
         uses: google-github-actions/deploy-cloudrun@v2
         with:
           service: ${{ needs.setup-env.outputs.service_name }}
-          image: "${{ env.ARTIFACT_REGISTRY }}/${{ env.PROJECT_ID }}/cdaras/${{ env.IMAGE_NAME }}:${{ needs.setup-env.outputs.image_tag }}"
+          image: "${{ env.ARTIFACT_REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.PROJECT_KEY }}/${{ env.IMAGE_NAME }}:${{ needs.setup-env.outputs.image_tag }}"
           region: ${{ env.REGION }}
           flags: >-
             --allow-unauthenticated
@@ -152,18 +159,18 @@ jobs:
       id-token: write
 
     steps:
+      # Authenticate to GCP using Service Account JSON Key (Stored in GitHub Secrets)
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
-          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
 
       - name: Deploy to Cloud Run (Production)
         id: deploy
         uses: google-github-actions/deploy-cloudrun@v2
         with:
           service: ${{ needs.setup-env.outputs.service_name }}
-          image: "${{ env.ARTIFACT_REGISTRY }}/${{ env.PROJECT_ID }}/cdaras/${{ env.IMAGE_NAME }}:${{ needs.setup-env.outputs.image_tag }}"
+          image: "${{ env.ARTIFACT_REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.PROJECT_KEY }}/${{ env.IMAGE_NAME }}:${{ needs.setup-env.outputs.image_tag }}"
           region: ${{ env.REGION }}
           flags: >-
             --allow-unauthenticated
